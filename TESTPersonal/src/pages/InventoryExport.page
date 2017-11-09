@@ -1,0 +1,8 @@
+<apex:page controller="WarehouseExportController" 
+    showheader="false" standardStyleSheets="false"
+    contentType="text/csv#InventoryExport.csv" readOnly="true">Name,Quantity__c,Price__c
+    
+    <apex:repeat value="{!merchandise}" var="merch">
+{!merch.Name},{!merch.Quantity__c},{!merch.Price__c}
+</apex:repeat>
+</apex:page>

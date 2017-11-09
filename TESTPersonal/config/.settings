@@ -1,0 +1,17 @@
+{
+    "projectName": "TESTPersonal",
+    "username": "kishorepadmaraju@gmail.com",
+    "id": "dfd33e00-c578-11e7-83ff-27cb2b5297ab",
+    "namespace": "",
+    "orgType": "developer",
+    "loginUrl": "https://login.salesforce.com/",
+    "instanceUrl": "https://lighttesting-dev-ed.my.salesforce.com",
+    "workspace": "/Users/kishorepadmaraju/Documents",
+    "subscription": [
+        "ApexClass",
+        "ApexComponent",
+        "ApexPage",
+        "ApexTrigger",
+        "StaticResource"
+    ]
+}
