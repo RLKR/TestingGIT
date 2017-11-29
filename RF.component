@@ -1,0 +1,897 @@
+ <apex:component controller="ReachSF" layout="none">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="/soap/ajax/12.0/connection.js" type="text/javascript"></script>
+    <apex:includeScript value="/soap/ajax/15.0/connection.js" />
+    <apex:includeScript value="/soap/ajax/15.0/apex.js" />
+    <script>window.jQuery || document.write('<script src="{!URLFOR($Resource.JQuery,'jquery.min.js')}"><\/script>')</script>
+    
+    <apex:attribute name="selectedbusinessid" description="Busines ID" type="String" required="false" assignTo="{!selectedbusinessid}"/>
+    <apex:attribute name="selectedaccountid" description="Advertiser ID" type="String" required="false" assignTo="{!selectedaccountid}"/>
+    
+    <script>
+        var GLOBALRESTSF={};
+        GLOBALRESTSF['INITIDS'] = '{!initids}';
+        GLOBALRESTSF['DOMAIN'] = '{!domain}';
+        GLOBALRESTSF['USERKEY'] = '{!userkey}';
+        GLOBALRESTSF['BUSINESSCATEGORY'] = '{!businesscategory}';
+        GLOBALRESTSF['GEOTARGET'] = '{!geotarget}';
+        GLOBALRESTSF['TAX'] = '{!tax}';
+        GLOBALRESTSF['PRODUCT'] = '{!product}';
+        GLOBALRESTSF['PLATFORM'] = ('{!businessplatform}' != '') ? '{!businessplatform}' : 'USA' ;
+        GLOBALRESTSF['LOCALE'] = '{!userlocale}';
+        GLOBALRESTSF['BUSINESSID'] = '{!businessid}';
+        GLOBALRESTSF['COBRANDID'] = '{!cobrandid}';
+        GLOBALRESTSF['BUSINESSCOUNTRY'] = '{!businesscountry}';
+        GLOBALRESTSF['TARGETCOUNTRY'] = '{!accountcountry}';
+        GLOBALRESTSF['TARGETSTATE'] = '{!accountstate}';
+        GLOBALRESTSF['TARGETZIP'] = '{!accountzip}';
+        GLOBALRESTSF['BUSINESSES'] = '{!Businesses}';
+        GLOBALRESTSF['VALIDEMAIL'] = '{!ValidEmail}';
+        
+        (function( $ ){
+            
+            //Help functions
+            
+            var reachsf_elems = [
+                'reachsf_business_category',
+                'reachsf_business_subcategory',
+                'reachsf_promote_category',
+                'reachsf_Promote_subcategory',
+                'reachsf_geotarget_country',
+                'reachsf_geotarget_state',
+                'reachsf_geotarget_zip',
+                'reachsf_budget',
+                'reachsf_min_budget',
+                'reachsf_max_budget',
+                'reachsf_setup_fee',
+                'reachsf_setup_fee_override',
+                'reachsf_cycle_fee',
+                'reachsf_cycle_fee_override',
+                'reachsf_contact_time_zone',
+                'reachsf_creation_type',
+                'reachsf_default_cycles',
+                'reachsf_offer_name',
+                'reachsf_offer_id',
+                'reachsf_master_offer_id',
+                'reachsf_campaign_type',
+                'reachsf_campaign_sub_type',
+                'reachsf_tax',
+                'reachsf_businesses',
+                'reachsf_validemail'
+            ];
+            var methods = {    
+                business_category : function(reachsf_class) {
+                    //Business Category
+                    counter = 1;
+                    $(reachsf_class).each(function() {
+                        rest_url = GLOBALRESTSF['BUSINESSCATEGORY'] + '&category_only=1&platform=' + GLOBALRESTSF['PLATFORM'] + '&locale=' + GLOBALRESTSF['LOCALE'];
+                        var new_id = 'reachsf_business_category_' + counter;
+                        var sub_new_id = 'reachsf_business_subcategory_' + counter;
+                         
+                        var old_id = $(this).attr('name');                 
+                        if ($('#'+new_id).length == 0){
+                            $(this).before('<select id="' + new_id + '"></select>');
+                            $('#'+new_id).css('width','50%');
+                            $('#'+new_id).css('margin','2px');                                                                                                          
+                            $('#'+new_id).append('<option value="">--None--</option>');                        
+                            $.get(rest_url,function(data){
+                                var data = data.replace(/\\/g,'');                                                                
+                                var data = $.parseJSON(data);
+                                if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                    window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('business_category', rest_url, data);                      
+                                for( i = 0; i < data.result.names.length; i++)
+                                    $('#' + new_id).append('<option value="' + data.result.codes[i] + '">' + data.result.names[i] + '</option>');
+                            }).complete(function(){
+                                $('#'+new_id+' option').filter(function() {
+                                    return $(this).text() === $('input[name="'+old_id+'"]').val();
+                                }).first().attr('selected', 'selected');
+                            
+                                if($('input[name="'+old_id+'"]').val() != ''){
+                                    $('#'+sub_new_id).removeAttr('disabled');
+                       
+                                    get_sub();
+                                }
+                            });
+                            $(this).css('display','none');                                          
+                            $('label[for="'+old_id+'"]').attr('for',new_id);
+                        
+                            function get_sub(){
+                                $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').text());
+                                    rest_url = GLOBALRESTSF['BUSINESSCATEGORY']+'&subcategory_only=1&idBusinessCategory='+$('#'+new_id+' option:selected').attr('value')+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE'];
+                                    $.get(rest_url,function(data){
+                                        data = data.replace(/\\/g,'');                                                                
+                                        data = $.parseJSON(data);
+                                        if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                            window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('business_subcategory', rest_url, data);                                
+                                        $('#'+sub_new_id).removeAttr('disabled');
+                                        $('#'+sub_new_id).empty();
+                                        $('#'+sub_new_id).append('<option value="">--None--</option>');
+                                       
+                                                                  
+                                        for( i=0; i< data.result.names.length; i++){
+                                            $('#'+sub_new_id).append('<option value="'+data.result.codes[i]+'">'+data.result.names[i]+'</option>');
+                                        }                                
+                                    }).complete(function(){
+                                        $('#'+sub_new_id+' option').filter(function() {
+                                            return $(this).text() === $('#'+sub_new_id).next('.reachsf_business_subcategory').val();
+                                        }).first().attr('selected', 'selected');  
+                                    
+                                        
+                                        
+                                     });                    
+                            }
+                        
+                            $('#'+new_id).change(function() {
+                                $('.reachsf_business_category_id').val($('#'+new_id).val());
+                                $('#'+sub_new_id).next('.reachsf_business_subcategory').val(''); 
+                                $('#'+new_id+' option:first').attr('disabled','disabled');
+                                $('.reachsf_business_vertical').val('');
+                                
+                                get_sub();
+                            
+                            });
+                        }
+                        counter++;
+                    });
+                },
+                business_subcategory : function(reachsf_class) {
+                    //Business SubCategory
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_business_subcategory_'+counter;
+                        var old_id = $(this).attr('name'); 
+                        if($('#'+new_id).length != 0) return;                                               
+                        $(this).before('<select id="'+new_id+'"  disabled="disabled"></select>');
+                        $('#'+new_id).append('<option value="">--None--</option>');
+                        $('#'+new_id).css('width','50%');
+                        $('#'+new_id).css('margin','2px');                                                                                 
+                        $(this).css('display','none');
+                        
+                        function get_vert(){
+                        rest_url = GLOBALRESTSF['BUSINESSCATEGORY']+'&vertical_only=1&idBusinessSubCategory='+$('#'+new_id+' option:selected').attr('value')+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE'];
+                        $.get(rest_url,function(data){
+                            data = data.replace(/\\/g,'');                                                                
+                            data = $.parseJSON(data);
+                            if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('business_subcategory', rest_url, data);                 
+                          // alert(data.result.names);
+                           $('.reachsf_business_vertical').text(data.result.names);
+                           $('.reachsf_business_vertical').val(data.result.names);  
+                        }).complete(function(){
+                            
+                           // alert(data.result.names);
+                           }) 
+                        }
+                        
+                        $('#'+new_id).change(function(){
+                            $('.reachsf_business_subcategory_id').val($('#'+new_id).val());
+                            $('#'+new_id+' option:first').attr('disabled','disabled'); 
+                            $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').text());
+                            get_vert();
+                        });
+                        counter++;
+                    });
+                    
+                },
+                 promote_category : function(reachsf_class) {
+                    //promote Category
+                    counter = 1;
+                    $(reachsf_class).each(function() {
+                      //  alert('hello');
+                        rest_url = GLOBALRESTSF['BUSINESSCATEGORY'] + '&category_only=1&platform=' + GLOBALRESTSF['PLATFORM'] + '&locale=' + GLOBALRESTSF['LOCALE'];
+                        var new_id = 'reachsf_promote_category_' + counter;
+                        var prom_new_id = 'reachsf_Promote_subcategory_' + counter;  
+                        var old_id = $(this).attr('name');
+                        
+                        //alert (old_id);                 
+                        if ($('#'+new_id).length == 0){
+                            $(this).before('<select id="' + new_id + '"></select>');
+                            $('#'+new_id).css('width','200px');
+                           // $('#'+new_id).css('margin','2px');                                                                                                          
+                           //$('#'+new_id).append('<option value="">--None--</option>');                        
+                            $.get(rest_url,function(data){
+                                var data = data.replace(/\\/g,''); 
+                                                                                               
+                                var data = $.parseJSON(data);
+                                if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                    window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('promote_category', rest_url, data);                      
+                                for( i = 0; i < data.result.names.length; i++)
+                                    $('#' + new_id).append('<option value="' +  data.result.codes[i] + '">' + data.result.names[i] + '</option>');
+                               
+                            }).complete(function(){
+                                $('#'+new_id+' option').filter(function() {
+                                    return $(this).text() === $('input[name="'+old_id+'"]').val();
+                                }).first().attr('selected', 'selected');
+                                 
+                                if($('input[name="'+old_id+'"]').val() != '--None--'){
+                                    $('#'+prom_new_id).removeAttr('disabled');
+                                    get_sub1();
+                                }
+                            });
+                            $(this).css('display','none');                                          
+                            $('label[for="'+old_id+'"]').attr('for',new_id);
+                        
+                            function get_sub1(){
+                                $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').text());
+                                    rest_url = GLOBALRESTSF['BUSINESSCATEGORY']+'&subcategory_only=1&idBusinessCategory='+$('#'+new_id+' option:selected').attr('value')+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE'];
+                                    $.get(rest_url,function(data){
+                                        data = data.replace(/\\/g,'');                                                                
+                                        data= data.replace(/'/g,'');
+                                        data = $.parseJSON(data);
+                                        if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                            window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('business_subcategory', rest_url, data);                                
+                                        
+                                        $('#'+prom_new_id).removeAttr('disabled');
+                                        $('#'+prom_new_id).empty();
+                                        //$('#'+prom_new_id).append('<option value="">--None--</option>'); 
+                                                                  
+                                        for( i=0; i< data.result.names.length; i++){
+                                             $('#'+prom_new_id).append('<option value="'+data.result.names[i]+'">'+data.result.names[i]+'</option>');
+                                           
+                                        }                                
+                                    }).complete(function(){
+                                     /*  $('#'+prom_new_id+' option').filter(function() {
+                                            return $(this).text() === $('#'+prom_new_id).next('.reachsf_Promote_subcategory').val();
+                                        }).first().attr('selected', 'selected');*/
+                                        
+                                      // var mulvalues = $('#'+prom_new_id).next('.reachsf_Promote_subcategory').val().split(';'); 
+                                       var mulvalues=$('#bizcatvalue').val().split(';');
+                                        $('#'+prom_new_id).val(mulvalues);
+                                        $('#'+prom_new_id + ' option:selected').remove();
+                                       // alert('mulval:'+mulvalues);
+                                     });                    
+                            }
+                        
+                            $('#'+new_id).change(function() {
+                               // $('.reachsf_promote_category_id').val($('#'+new_id).val());
+                                $('#'+prom_new_id).next('.reachsf_Promote_subcategory').val('');
+                                $('.selected_values').empty();
+                                var mulval='';
+                                bizsubcatval(mulval,mulval,mulval);
+                                $('#bizcatvalue').val('');
+                                $('#'+new_id+' option:first').attr('disabled','disabled');
+                                get_sub1();
+                                // alert('here');
+                                
+                            });
+                        }
+                        counter++;
+                    });
+                },
+                Promote_subcategory : function(reachsf_class) {
+                    //Promote SubCategory
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_Promote_subcategory_'+counter;
+                        var old_id = $(this).attr('name');
+                         
+                        if($('#'+new_id).length != 0) return;                                               
+                        $(this).before('<select id="'+new_id+'" multiple size="8"  disabled="disabled"></select>');
+                        $('#'+new_id).append('<option value="">--None--</option>');
+                        $('#'+new_id).css('width','200px');
+                        //$('#'+new_id).css('margin','2px');                                                                                 
+                        $(this).css('display','none');
+                        $('#'+new_id).change(function(){
+                          //  $('.reachsf_Promote_subcategory_id').val($('#'+new_id).val());
+                           //$('#'+new_id+' option:first').attr('disabled','disabled'); 
+                          // alert('here');
+                         // $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').text());
+                        });
+                      counter++;
+                    });
+                },
+                geotarget_country : function(reachsf_class) {
+                    //Geotarget Country
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        rest_url = GLOBALRESTSF['GEOTARGET']+'&country_only=1'+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE'];                    
+                        var new_id = 'reachsf_geotarget_country_'+counter;
+                        var state_new_id = 'reachsf_geotarget_state_'+counter;
+                        var old_id = $(this).attr('name');
+                        var contact_time_zone_id='#reachsf_contact_time_zone_'+counter; /*Get id of contact time zone */
+                       
+                        if($('#'+new_id).length == 0){
+                            $(this).before('<select id="'+new_id+'"></select>');
+                            $('#'+new_id).css('width','50%');                                                                                                          
+                            $('#'+new_id).append('<option value="">--None--</option>');
+                            $.get(rest_url,function(data){
+                                data = data.replace(/\\/g,'');                                                                
+                                data = $.parseJSON(data);
+                                if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                    window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('geotarget_country', rest_url, data);
+                                for( i=0; i< data.result.names.length; i++){
+                                    $('#'+new_id).append('<option value="'+data.result.codes[i]+'">'+data.result.names[i]+'</option>');
+                                }
+                            }).complete(function(){
+                                $('#'+new_id).val($('input[name="'+old_id+'"]').val());
+                                if($('input[name="'+old_id+'"]').val() != ''){
+                                    $('#'+state_new_id).removeAttr('disabled');
+                                    get_state();
+                                }
+                            });
+                            $(this).css('display','none');                                          
+                            $('label[for="'+old_id+'"]').attr('for',new_id);
+                            function get_state(){
+                            rest_url = GLOBALRESTSF['GEOTARGET']+'&state_only=1'+'&country_code='+$('#'+new_id+' option:selected').attr('value')+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE']; 
+                                $.get(rest_url,function(data){
+                                    data = data.replace(/\\/g,'');                                                                
+                                    data = $.parseJSON(data);
+                                    if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                        window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('geotarget_country_state', rest_url, data);
+                                    $('#'+state_new_id).empty();
+                                    $('#'+state_new_id).append('<option value="">--None--</option>');
+                                    for( i=0; i< data.result.names.length; i++){
+                                        $('#'+state_new_id).append('<option value="'+data.result.codes[i]+'">'+data.result.names[i]+'</option>');
+                                    };
+                            }).complete(function(){
+                                    $('#'+state_new_id).val($('#'+state_new_id).next('.reachsf_geotarget_state').val());
+                                }); 
+                            }
+                            $('#'+new_id).change(function() {
+                                $(contact_time_zone_id).val('');/*Clear contact time zone*/
+                                $('#'+new_id+' option:first').attr('disabled','disabled');
+                                $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').val());  
+                                $('#'+state_new_id).removeAttr('disabled');
+                                $('#'+state_new_id).next('.reachsf_geotarget_state').val('');
+                                get_state();
+                            });
+                        }
+                        counter++;
+                    });
+                },
+                geotarget_state : function(reachsf_class) {
+                    //GeoTarget State
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        /*start zip fix*/
+                        var country_id = '#reachsf_geotarget_country_'+counter;
+                        var state_id = '#reachsf_geotarget_state_'+counter;
+                        var contact_time_zone_id='#reachsf_contact_time_zone_'+counter;
+                        
+                        /*end zip fix*/               
+                        var new_id = 'reachsf_geotarget_state_'+counter;
+                      
+                        var zip_new_id = 'reachsf_geotarget_zip_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length == 0){
+                            $(this).before('<select id="'+new_id+'"></select>');
+                            $('#'+new_id).css('width','50%');                                                                                                          
+                            $('#'+new_id).append('<option value="">--None--</option>')                    
+                            $('#'+new_id).attr('disabled','disabled');
+                            $(this).css('display','none');
+                            $('label[for="'+old_id+'"]').attr('for',new_id);
+                        
+                            if($('input[name="'+old_id+'"]').val() != ''){
+                                    $('#'+zip_new_id).removeAttr('disabled');
+                                    rest_url = GLOBALRESTSF['GEOTARGET']+'&state_only=1'+'&country_code='+$('#'+new_id+' option:selected').attr('value')+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE']; 
+                                    $.get(rest_url,function(data){
+                                        data = data.replace(/\\/g,'');                                                                
+                                        data = $.parseJSON(data);
+                                        if (!data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length)
+                                            window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('geotarget_country_state', rest_url, data);
+                                        $('#'+state_new_id).empty();
+                                        $('#'+state_new_id).append('<option value="">--None--</option>');
+                                        $('#'+state_new_id).next('.reachsf_geotarget_state').val('');
+                                        for( i=0; i< data.result.names.length; i++){
+                                            $('#'+state_new_id).append('<option value="'+data.result.codes[i]+'">'+data.result.names[i]+'</option>');
+                                        };
+                                    }).complete(function(){
+                                        $('#'+new_id).val($('input[name="'+old_id+'"]').val());
+                                        $('#'+zip_new_id).removeAttr('disabled');
+                                    }); 
+                            }
+                            $('#'+new_id).change(function(){
+                                $('#'+new_id+' option:first').attr('disabled','disabled');
+                                /*$('#'+zip_new_id).val('');*/
+                                /*start zip fix*/
+                                /*alert($('#'+zip_new_id).val());*/
+                                
+                                /*** START**Add code to fill contact time zone based on state selection***/
+                                $(contact_time_zone_id).val('');
+                                if($(contact_time_zone_id).length!=0){
+                                     sforce.connection.sessionId = "{!$Api.Session_ID}";
+                                     var queryString="Select Time_Zone__c from State_TimeZone__c where Country_Name__c='"+$(country_id).val()+"' and State__c='"+$(state_id).val() +"' Limit 1";
+                                     try
+                                     {
+                                     var getTimeZone = sforce.connection.query(queryString);
+                                     var size_record=getTimeZone.size;
+                                     if(size_record>0)
+                                     {
+                                         var dataSize=getTimeZone.getArray("records");
+                                         $(contact_time_zone_id).val(dataSize[0].Time_Zone__c);
+                                     }else
+                                     {
+                                        // alert('No Time Zone Available For Selected State'); /*Enable it later once all time zone filled in State_TimeZone__c object*/
+                                     }
+                                     }
+                                     catch(e)
+                                     {
+                                     
+                                     }
+                                 }
+                                /*** END**Add code to fill contact time zone based on state selection***/    
+                                
+                                rest_url = GLOBALRESTSF['GEOTARGET']+'&zip_only=1'+'&country_code='+$(country_id+' option:selected').attr('value')+'&state_code='+$(state_id+' option:selected').attr('value')+'&zip_code='+$('#'+zip_new_id).val()+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE'];
+                                $.get(rest_url,function(data){
+                                    data = data.replace(/\\/g,'');                                                                
+                                    data = $.parseJSON(data);
+                                    if( data.result.message == 'GeoTarget not found'){
+                                        alert('Not a valid postal code for the selected state.');
+                                        $('#'+zip_new_id).val('');
+                                        return;
+                                    }
+                                    if( !data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length )
+                                        window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('geotarget_state_zip', rest_url, data);
+                                
+                                })    
+
+                                /*end zip fix*/
+                                $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').val());
+                                $('#'+zip_new_id).removeAttr('disabled');                            
+                            });
+                        }
+                        counter++;
+                    });
+                },
+                geotarget_zip : function(reachsf_class) {
+                    //GeoTarget Zip
+                    counter = 1;
+                    $(reachsf_class).each(function(){               
+                        var new_id = 'reachsf_geotarget_zip_'+counter;
+                        var old_id = $(this).attr('name');
+                        var country_id = '#reachsf_geotarget_country_'+counter;
+                        var state_id = '#reachsf_geotarget_state_'+counter;
+                        if($('#'+new_id).length == 0){
+                            $(this).attr('id',new_id);                 
+                            $('label[for="'+old_id+'"]').attr('for',new_id);
+                            $(this).change(function(){
+                                rest_url = GLOBALRESTSF['GEOTARGET']+'&zip_only=1'+'&country_code='+$(country_id+' option:selected').attr('value')+'&state_code='+$(state_id+' option:selected').attr('value')+'&zip_code='+$('input[name="'+old_id+'"]').val()+'&platform='+GLOBALRESTSF['PLATFORM']+'&locale='+GLOBALRESTSF['LOCALE']; 
+                                $.get(rest_url,function(data){
+                                    data = data.replace(/\\/g,'');                                                                
+                                    data = $.parseJSON(data);
+                                    if( data.result.message == 'GeoTarget not found'){
+                                        alert('Not a valid postal code for the selected state.');
+                                        $('#'+new_id).val('');
+                                        return;
+                                    }
+                                    if( !data.result || data.result.error == 1 || data.result.codes.length != data.result.names.length ) window.location.href = '/apex/errorpage?msg=(SFER107) Error in fetching data. Please contact System Administrator.';
+
+                                });
+                            });
+                        }
+                        counter++;
+                    });
+                },
+                offer_name : function(reachsf_class) {                    
+                    //Products
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_product_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        rest_url = GLOBALRESTSF['PRODUCT']+'&platform='+GLOBALRESTSF['PLATFORM']+'&business_id='+GLOBALRESTSF['BUSINESSID'];
+                        $(this).before('<select id="'+new_id+'"></select>');
+                        $('#'+new_id).css('width','50%');                                                                                                          
+                        $('#'+new_id).append('<option value="">--None--</option>');
+                        $(this).css('display','none');
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        
+                        if(!GLOBALRESTSF['BUSINESSID']) return;
+                        
+                        $.get(rest_url,function(data){
+                            product_json = data;
+                            data = data.replace(/\\/g,'');                                                                
+                            data = $.parseJSON(data);
+                            if( !data.result || data.result.error == 1 || data.result.products.length == 0)
+                                window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('offer_name', rest_url, data);
+                                //window.location.href = '/apex/errorpage?msg=(SFER108) Error in fetching data. Please contact System Administrator.';
+                            for( i=0; i< data.result.products.length; i++){
+                                $('#'+new_id).append('<option value="'+data.result.products[i].offer_id+'">'+data.result.products[i].product_name+'</option>');
+                                if(data.result.products[i].disabled == 1) $('#'+new_id+' option:last').attr('disabled','disabled');
+                            }                                               
+                        });
+                        var index = counter;
+                        $('#'+new_id).change(function(){
+                            data = $.parseJSON(product_json);
+                            if( !data.result || data.result.error == 1 || data.result.products.length == 0)
+                                window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('offer_name2', rest_url, data);
+                                //window.location.href = '/apex/errorpage?msg=(SFER109) Error in fetching data. Please contact System Administrator.';                            
+                            $('#'+new_id+' option:first').attr('disabled','disabled');
+                            
+                            //Offer Name
+                            $('input[name="'+old_id+'"]').val($('#'+new_id+' option:selected').text().replace('-- ',''));
+                            //Offer Id
+                            var offer_id = $('#'+new_id+' option:selected').val();
+                            $('#reachsf_offer_id_'+index).val(offer_id);
+                            
+                            var products = data.result.products;
+                            var offer_index;
+                            for(product in products){
+                                if(products[product].offer_id == offer_id){
+                                 offer_index = product;
+                                 break;
+                                }
+                            }
+                            
+                            var selected_product = products[offer_index];
+                            
+                            //Campaign Type Id
+                            $('#reachsf_campaign_type_'+index).val(selected_product.campaign_type_id);
+                            //Campaign Subtype Id
+                            $('#reachsf_campaign_sub_type_'+index).val(selected_product.campaign_subtype_id);
+                            //Master Offer Id
+                            $('#reachsf_master_offer_id_'+index).val(selected_product.master_offer_id);
+                            //Default Cycles
+                            $('#reachsf_default_cycles_'+index).val(selected_product.default_cycles);
+                            //Creation Type
+                            $('#reachsf_creation_type_'+index).val(selected_product.creation_type);
+                            //Budget
+                            $('#reachsf_budget_'+index).val(selected_product.min_budget);                            
+                            
+                            for(setupfee in selected_product.setup_fee){
+                                if(selected_product.min_budget >= selected_product.setup_fee[setupfee].min_budget && selected_product.max_budget <= selected_product.setup_fee[setupfee].max_budget){
+                                    //Setup Fee
+                                    $('#reachsf_setup_fee_'+index).val(selected_product.setup_fee[setupfee].fee_amount);
+                                    //Setup Fee Override
+                                    $('#reachsf_setup_fee_override_'+index).val(selected_product.setup_fee[setupfee].changeable);
+                                    break;
+                                }
+                            }
+                            
+                            for(cyclefee in selected_product.cycle_fee){
+                                if(selected_product.min_budget >= selected_product.cycle_fee[cyclefee].min_budget && selected_product.max_budget <= selected_product.cycle_fee[cyclefee].max_budget){
+                                    //Cycle Fee
+                                    $('#reachsf_cycle_fee_'+index).val(selected_product.cycle_fee[cyclefee].fee_amount);
+                                    //Cycle Fee Override
+                                    $('#reachsf_cycle_fee_override_'+index).val(selected_product.cycle_fee[cyclefee].changeable);
+                                    break;
+                                }
+                            }                            
+                        });
+                        counter++;
+                    });
+                },
+                offer_id : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_offer_id_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                        $(reachsf_class).change(function(){
+                            alert(product_json);
+                        });
+                    });
+                },
+                master_offer_id : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_master_offer_id_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);                        
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                contact_time_zone : function(reachsf_class) {
+                //contact time zone
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_contact_time_zone_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);                        
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                campaign_type : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_campaign_type_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                campaign_sub_type : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_campaign_sub_type_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                budget : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_budget_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);                        
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                min_budget : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_min_budget_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                max_budget : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_max_budget_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                setup_fee : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_setup_fee_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                setup_fee_override : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_setup_fee_override_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                cycle_fee : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_cycle_fee_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                cycle_fee_override : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_cycle_fee_override_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                creation_type : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_creation_type_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                default_cycles : function(reachsf_class) {
+                    counter = 1;
+                    $(reachsf_class).each(function(){
+                        var new_id = 'reachsf_default_cycles_'+counter;
+                        var old_id = $(this).attr('name');
+                        if($('#'+new_id).length != 0) return;
+                        $('label[for="'+old_id+'"]').attr('for',new_id);
+                        $(this).attr('id',new_id);
+                        counter++;
+                    });
+                },
+                product_row : function(reachsf_class) {
+                    //Product Row
+                    $(reachsf_class).css('border','1px solid yellow');
+                },
+                tax : function(reachsf_class) {
+                    //Taxes
+                    /*$(reachsf_class).each(function(){
+                        rest_url = GLOBALRESTSF['TAX']+'&platform='+GLOBALRESTSF['PLATFORM']+'&business_country='+GLOBALRESTSF['BUSINESSCOUNTRY']+'&cobrand_id='+GLOBALRESTSF['COBRANDID']+'&country_code='+GLOBALRESTSF['TARGETCOUNTRY']+'&state_code='+GLOBALRESTSF['TARGETSTATE']+'&zip_code='+GLOBALRESTSF['TARGETZIP'];
+                        var old_id = $(this).attr('name');
+                        $.get(rest_url,function(data){
+                            data = data.replace(/\\/g,'');                                                                
+                            data = $.parseJSON(data);
+                            //debugger;
+                            if (!data.result || data.result.error == 1)
+                                window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('tax', rest_url, data);
+                            $(this).css('border','1px solid red');
+                            $('input[name="'+old_id+'"]').val(data.result.tax_rate);
+                        }).complete(function(){
+                        taxrate = document.getElementsByClassName('reachsf_tax')[0].value;
+                        //taxrate = 10.00;//for testing
+                        //alert('taxrate: ' + taxrate);
+                        totalvalue = document.getElementsByClassName('reachsf_tv')[0].value;
+                        //alert('totalvalue: ' + totalvalue);
+                        calculatedtax = (taxrate * totalvalue) / 100;
+                        calculatedtax = calculatedtax.toFixed(2);
+                        //alert('calculatedtax: ' + calculatedtax);
+                        document.getElementsByClassName('reachsf_ctax')[0].value = calculatedtax;
+                        document.getElementsByClassName('reachsf_ctax_display')[0].innerHTML = numberWithCommas(calculatedtax);
+                        finaltotalvalue = parseFloat(calculatedtax) + parseFloat(totalvalue);
+                        finaltotalvalue = finaltotalvalue.toFixed(2);
+                        document.getElementsByClassName('reachsf_ftv')[0].innerHTML = numberWithCommas(finaltotalvalue);
+                        //alert('finaltotalvalue: ' + finaltotalvalue);
+                        });
+                    });*/
+                },
+                businesses : function(reachsf_class) {
+                    $(reachsf_class).each(function(){
+                        rest_url = GLOBALRESTSF['BUSINESSES'] + '&email={!username}';
+                        var new_id = 'reachsf_businesses';
+                        $(this).before('<select id="'+new_id+'"></select>');
+                        $('#' + new_id).css('width','50%');
+                        $('#' + new_id).css('margin','2px');                                                                                                          
+                        //$('#' + new_id).append('<option value="">--None--</option>');
+                        $.get(rest_url, function(data){
+                            data = data.replace(/\\/g,'');                                                                
+                            data = $.parseJSON(data);
+                            if( !data.result || data.result.error == 1) window.location.href = '/apex/errorpage?msg=(SFER111) Error in fetching data. Please contact System Administrator.';
+                            $('#' + new_id).append((0 == data.result.total_rows)? '<option value="">--None--</option>' : '<option value="" disabled="disabled">--None--</option>' );
+                            for(i = 0; i < data.result.total_rows; i++){
+                                    $('#'+new_id).append('<option value="' + data.result[i].business_id + '">' + data.result[i].business_name + ' (' + data.result[i].platform + ')</option>');
+                                }
+                        }).complete(function(){
+                            $('#'+new_id).val($('#'+new_id).siblings('.BusinessId').val());
+                        });
+                        $(this).css('display','none');
+                    });
+                },
+                validemail : function(reachsf_class)
+                {
+                    $(reachsf_class).each(function()
+                    {
+                        $(this).change(function()
+                        {
+                            rest_url = GLOBALRESTSF['VALIDEMAIL'] + 'email=' + $(this).val();
+                            //alert(rest_url);
+                            $.get(rest_url,function(data)
+                            {
+                                data = data.replace(/\\/g,'');                                                                
+                                data = $.parseJSON(data);
+                                if (!data.result)
+                                    window.location.href = '/apex/errorpage?errorid=' + CreateErrorLog('validemail', rest_url, data);
+                                else if (data.result.error != '')
+                                {
+                                    alert('Email is invalid.');
+                                    $('.reachsf_validemail').each(function(){ $(this).val(''); });
+                                    return;
+                                }
+                            });
+                        });
+                    });
+                }
+            };
+            $.fn.ReachSF = function() { try {
+                for ( reachsf_elem in reachsf_elems ){
+                    method = reachsf_elems[reachsf_elem].substring(reachsf_elems[reachsf_elem].indexOf('_') + 1);
+                    if(methods[method]){
+                        methods[method].apply(this, ['.' + reachsf_elems[reachsf_elem]] );
+                    }
+                }
+            } catch(ex){}};
+    
+        })( jQuery );
+                    
+    $('html').ReachSF();
+    function numberWithCommas(x)
+    {
+        x = x.toString();
+        var pattern = /(-?\d+)(\d{3})/;
+        while (pattern.test(x))
+            x = x.replace(pattern, "$1,$2");
+        return x;
+    }
+    function CreateErrorLog(theModule, URLInfo, Log)
+    {
+        var ErrorLog = new sforce.SObject("Error_Log__c");
+        ErrorLog.Message__c = BuildErrorMessage(theModule);
+        ErrorLog.URL_Info__c = window.location.href;
+        ErrorLog.Logger__c = '{!$User.Id}';
+        ErrorLog.Log__c = URLInfo + '>>>' + Log;
+        var createRecords = [];
+        createRecords.push(ErrorLog);
+        sforce.connection.sessionId = "{!$Api.Session_ID}";
+        result = sforce.connection.create(createRecords);
+        return result[0].id;
+    }
+    function BuildErrorMessage(theModule)
+    {
+        var theMessage = '';
+        if ('business_category' == theModule)
+        {
+            theMessage = 'Business Category could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Incorrect Platform Code on Business.</li></ul>';
+            theMessage += '<br />(SFER101) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('business_subcategory' == theModule)
+        {
+            theMessage = 'Business SubCategory could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Missing or Incorrect Platform Code on Business.</li>';
+            theMessage += '<li>Incorrect Business Category.</li></ul>';
+            theMessage += '<br />(SFER102) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('geotarget_country' == theModule)
+        {
+            theMessage = 'Country list could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Incorrect Platform Code on Business.</li></ul>';
+            theMessage += '<br />(SFER103) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('geotarget_country_state' == theModule)
+        {
+            theMessage = 'State list could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Incorrect Country Code.</li>';
+            theMessage += '<li>Incorrect Platform Code on Business.</li></ul>';
+            theMessage += '<br />(SFER104) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('geotarget_state_zip' == theModule)
+        {
+            theMessage = 'Postal Code could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Incorrect Country Code.</li></ul>';
+            theMessage += '<br />(SFER105) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('offer_name' == theModule)
+        {
+        }
+        else if ('offer_name2' == theModule)
+        {
+        }
+        else if ('tax' == theModule)
+        {
+            theMessage = 'Tax could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Missing Platform Code on Business.</li>';
+            theMessage += '<li>Incorrect Country on Business.</li>';
+            theMessage += '<li>Incorrect Cobrand on Business.</li></ul>';
+            theMessage += '<br />(SFER106) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('products' == theModule)
+        {
+            theMessage = 'Products could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>Missing or Incorrect BusinessId.</li>';
+            theMessage += '<li>Missing Platform Code on Business.</li></ul>';
+            theMessage += '<br />(SFER107) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('businesses' == theModule)
+        {
+            theMessage = 'Business could not be fetched because of one of the following reasons.';
+            theMessage += '<ul><li>You do not have valid business(es) in Platform.</li></ul>';
+            theMessage += '<br />(SFER108) Error in fetching data. Please contact System Administrator.';
+        }
+        else if ('validemail' == theModule)
+        {
+            theMessage = 'Email could not be validated';
+            theMessage += '<br />(SFER109) Error in fetching data. Please contact System Administrator.';
+        }
+        return theMessage;
+    }
+    </script>
+</apex:component>
